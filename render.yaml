@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: asfacil-whatsapp-bot
+    runtime: node
+    plan: starter
+    rootDir: asfacil-whatsapp-bot
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_SEND_ENABLED
+        value: false
+      - key: ASFACIL_BASE_URL
+        value: https://asfacil.com
+      - key: ASFACIL_REPORT_WEBHOOK_URL
+        sync: false

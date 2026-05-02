@@ -1,0 +1,23 @@
+{
+  "name": "asfacil-whatsapp-bot",
+  "version": "1.0.0",
+  "description": "WhatsApp bot scaffold for Asfacil",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "test:local": "node -e \"console.log('Use curl against localhost:3000/webhook')\""
+  },
+  "keywords": [
+    "whatsapp",
+    "asfacil",
+    "bot"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0"
+  }
+}
