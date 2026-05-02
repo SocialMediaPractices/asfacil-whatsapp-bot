@@ -101,6 +101,25 @@ curl -s -X POST http://localhost:3000/webhook \
 - **`/reports`** gives JSON for API/automation consumers
 - **`/reports.md`** gives a markdown export that fits OpenClaw/GBrain workflows
 
+## Sync reports into GBrain
+
+Use the included sync script to turn saved WhatsApp reports into a structured GBrain page.
+
+```bash
+# Preview the generated markdown
+node scripts/sync-reports-to-gbrain.js
+
+# Sync local report data into gbrain
+npm run sync:gbrain
+
+# Sync from a specific source
+node scripts/sync-reports-to-gbrain.js --source ./data/reports.json --put
+node scripts/sync-reports-to-gbrain.js --source https://asfacil-whatsapp-bot.onrender.com/reports --put
+```
+
+Default GBrain page slug:
+- `asfacil-community-reports`
+
 ## Deploy on Render
 This repo now includes `render.yaml` for a straightforward web service deploy.
 

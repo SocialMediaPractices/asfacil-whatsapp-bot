@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node src/server.js",
-    "test:local": "node -e \"console.log('Use curl against localhost:3000/webhook')\""
+    "test:local": "node -e \"console.log('Use curl against localhost:3000/webhook')\"",
+    "sync:gbrain": "node scripts/sync-reports-to-gbrain.js --put"
   },
   "keywords": [
     "whatsapp",
