@@ -12,6 +12,10 @@ services:
         value: 10000
       - key: VERIFY_TOKEN
         sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: REPORTS_TOKEN
+        sync: false
       - key: WHATSAPP_TOKEN
         sync: false
       - key: WHATSAPP_PHONE_NUMBER_ID

@@ -59,7 +59,8 @@ Examples:
 
 async function readSource(source) {
   if (/^https?:\/\//i.test(source)) {
-    const response = await fetch(source);
+    const token = process.env.REPORTS_TOKEN;
+    const response = await fetch(source, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
     if (!response.ok) {
       throw new Error(`Failed to fetch ${source}: ${response.status}`);
     }
