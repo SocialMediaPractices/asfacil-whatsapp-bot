@@ -106,6 +106,18 @@ async function createAlertSubscription({ phone, crossing, thresholdMinutes, lang
   };
 }
 
+const MAX_NOTE_LENGTH = 280;
+
+// Notes are free text from the public and flow into /reports.md and the GBrain markdown page,
+// so markup characters are dropped and the length is bounded.
+function sanitizeNote(note) {
+  return String(note || '')
+    .replace(/[<>`*_#|[\]\\]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_NOTE_LENGTH);
+}
+
 async function submitCommunityReport({ phone, crossing, lane, reportedWaitMinutes, note }) {
   const normalizedCrossing = normalizeCrossing(crossing);
   const normalizedLane = normalizeLane(lane) || 'General';
@@ -116,7 +128,7 @@ async function submitCommunityReport({ phone, crossing, lane, reportedWaitMinute
     lane: normalizedLane,
     mode: normalizeMode(lane) || 'Vehicle',
     reportedWaitMinutes,
-    note: note || '',
+    note: sanitizeNote(note),
     source: 'whatsapp',
     createdAt: new Date().toISOString(),
   };

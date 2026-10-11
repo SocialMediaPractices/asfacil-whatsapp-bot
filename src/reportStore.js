@@ -3,6 +3,8 @@ const path = require('path');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const REPORTS_PATH = path.join(DATA_DIR, 'reports.json');
+// Bounds the file (and the full rewrite on every append); older reports are dropped first.
+const MAX_STORED_REPORTS = 5000;
 
 function formatReportLine(report) {
   const note = report.note ? ` — ${report.note}` : '';
@@ -41,7 +43,7 @@ async function appendReport(report) {
     ...report,
   };
   reports.push(stored);
-  await writeReports(reports);
+  await writeReports(reports.slice(-MAX_STORED_REPORTS));
   return stored;
 }
 

@@ -198,7 +198,17 @@ async function continueReportFlow({ phone, text, language }) {
   return null;
 }
 
-async function getReplyForMessage({ text, from }) {
+// WhatsApp allows ~4,000-character messages. Collapsing whitespace and capping length keeps
+// every pattern below linear: a single message of a few thousand spaces used to stall the
+// inline-report regex for ~30s, blocking the whole (single-threaded) server.
+const MAX_MESSAGE_LENGTH = 500;
+
+function normalizeIncomingText(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim().slice(0, MAX_MESSAGE_LENGTH);
+}
+
+async function getReplyForMessage({ text: rawText, from }) {
+  const text = normalizeIncomingText(rawText);
   const language = detectLanguage(text);
   const lower = (text || '').toLowerCase().trim();
   const phone = from || 'local-test';
