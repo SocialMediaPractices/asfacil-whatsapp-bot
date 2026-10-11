@@ -3,9 +3,16 @@ const express = require('express');
 const { getReplyForMessage } = require('./bot');
 const { getTextFromWebhookBody, getWebhookEnvelopeSummary, sendWhatsAppText } = require('./whatsapp');
 const { readReports, exportReportsMarkdown } = require('./reportStore');
+const { safeEqual, allowUnsignedWebhooks, verifyMetaSignature, hasReportsAccess } = require('./security');
 
 const app = express();
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({
+  limit: '1mb',
+  // Keep the exact bytes Meta signed; the HMAC must be computed over the raw body, not re-serialized JSON.
+  verify: (req, _res, buf) => {
+    req.rawBody = buf;
+  },
+}));
 
 function logInfo(event, meta = {}) {
   console.log(JSON.stringify({ level: 'info', event, ...meta }));
@@ -41,7 +48,7 @@ app.get('/webhook', (req, res) => {
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  if (mode === 'subscribe' && token === process.env.VERIFY_TOKEN) {
+  if (mode === 'subscribe' && safeEqual(token, process.env.VERIFY_TOKEN)) {
     logInfo('webhook_verify_success');
     return res.status(200).send(challenge);
   }
@@ -50,17 +57,24 @@ app.get('/webhook', (req, res) => {
   return res.sendStatus(403);
 });
 
-app.get('/reports', async (_req, res) => {
+function requireReportsAccess(req, res, next) {
+  if (hasReportsAccess(req)) return next();
+  return res.status(401).json({ ok: false, error: 'unauthorized' });
+}
+
+app.get('/reports', requireReportsAccess, async (_req, res) => {
   try {
     const reports = await readReports();
-    return res.json({ ok: true, count: reports.length, reports });
+    // Reporter phone numbers never leave the service, even to authorized consumers.
+    const publicReports = reports.map(({ phone: _phone, ...report }) => report);
+    return res.json({ ok: true, count: publicReports.length, reports: publicReports });
   } catch (error) {
     logError('reports_list_failed', error);
     return res.status(500).json({ ok: false, error: 'reports_list_failed' });
   }
 });
 
-app.get('/reports.md', async (_req, res) => {
+app.get('/reports.md', requireReportsAccess, async (_req, res) => {
   try {
     const markdown = await exportReportsMarkdown();
     res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
@@ -72,6 +86,15 @@ app.get('/reports.md', async (_req, res) => {
 });
 
 app.post('/webhook', async (req, res) => {
+  const signed = verifyMetaSignature(req.rawBody, req.get('x-hub-signature-256'));
+  if (!signed && !allowUnsignedWebhooks()) {
+    logInfo('webhook_signature_rejected', {
+      hasSignature: Boolean(req.get('x-hub-signature-256')),
+      hasAppSecret: Boolean(process.env.WHATSAPP_APP_SECRET),
+    });
+    return res.sendStatus(401);
+  }
+
   try {
     const envelope = getWebhookEnvelopeSummary(req.body);
     const parsed = getTextFromWebhookBody(req.body);
@@ -112,6 +135,11 @@ app.post('/webhook', async (req, res) => {
       return res.json({ ok: true, via: 'meta-webhook', ignored: 'non_text_message' });
     }
 
+    if (signed) {
+      // A genuine Meta callback that carries neither messages nor statuses; nothing to do.
+      return res.json({ ok: true, via: 'meta-webhook', ignored: 'empty_event' });
+    }
+
     const message = req.body?.message || req.body?.text || '';
     logInfo('webhook_message_received', {
       via: 'local-test',
@@ -128,7 +156,8 @@ app.post('/webhook', async (req, res) => {
     logError('webhook_processing_failed', error, {
       path: '/webhook',
     });
-    return res.status(500).json({
+    // Acknowledge anyway: a non-2xx makes Meta retry the same event repeatedly, multiplying the failure.
+    return res.status(200).json({
       ok: false,
       error: 'internal_error',
       message: 'Webhook processing failed',
